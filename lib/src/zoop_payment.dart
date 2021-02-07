@@ -1,6 +1,7 @@
 part of flutter_zoop;
 
 class ZoopPayment {
+  String payload;
   String fees;
   List<FeeDetails> feeDetails;
   String createdAt;
@@ -33,7 +34,8 @@ class ZoopPayment {
   String customer;
 
   ZoopPayment(
-      {this.fees,
+      {this.payload,
+      this.fees,
       this.feeDetails,
       this.createdAt,
       this.arpc,
@@ -64,7 +66,8 @@ class ZoopPayment {
       this.status,
       this.customer});
 
-  ZoopPayment.fromJson(Map<String, dynamic> json) {
+  ZoopPayment.fromJson(Map<String, dynamic> json, String args) {
+    payload = args;
     fees = json['fees'];
     if (json['fee_details'] != null) {
       feeDetails = new List<FeeDetails>();
