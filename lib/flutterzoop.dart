@@ -11,6 +11,7 @@ import 'gen/flutterzoop.pb.dart' as protos;
 part 'src/constants.dart';
 part 'src/flutterzoop.dart';
 part 'src/zoop_charge.dart';
+part 'src/zoop_void.dart';
 part 'src/zoop_device.dart';
 part 'src/zoop_error_message.dart';
 part 'src/zoop_payment.dart';
