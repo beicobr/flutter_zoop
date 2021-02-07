@@ -60,12 +60,14 @@ import io.flutter.plugin.common.PluginRegistry.RequestPermissionsResultListener;
 import com.zoop.zoopandroidsdk.TerminalListManager;
 import com.zoop.zoopandroidsdk.ZoopAPI;
 import com.zoop.zoopandroidsdk.ZoopTerminalPayment;
+import com.zoop.zoopandroidsdk.ZoopTerminalVoidPayment;
 import com.zoop.zoopandroidsdk.commons.Extras;
 import com.zoop.zoopandroidsdk.terminal.ApplicationDisplayListener;
 import com.zoop.zoopandroidsdk.terminal.DeviceSelectionListener;
 import com.zoop.zoopandroidsdk.terminal.ExtraCardInformationListener;
 import com.zoop.zoopandroidsdk.terminal.TerminalMessageType;
 import com.zoop.zoopandroidsdk.terminal.TerminalPaymentListener;
+import com.zoop.zoopandroidsdk.terminal.VoidTransactionListener;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -103,10 +105,14 @@ public class FlutterzoopPlugin implements FlutterPlugin, ActivityAware, MethodCa
   private DeviceSelectionListener deviceSelectionListener;
   private TerminalListManager terminalListManager;
 
+  private VoidTransactionListener voidTransactionListener;
   private TerminalPaymentListener terminalPaymentListener;
+  private ZoopTerminalVoidPayment zoopTerminalVoidPayment;
   private ZoopTerminalPayment zoopTerminalPayment;
   private ApplicationDisplayListener applicationDisplayListener;
   private ExtraCardInformationListener extraCardInformationListener;
+
+  private String lastId = "";
 
   /** Plugin registration. */
   public static void registerWith(Registrar registrar) {
@@ -187,7 +193,7 @@ public class FlutterzoopPlugin implements FlutterPlugin, ActivityAware, MethodCa
 
             @Override
             public void updateDeviceListForUserSelection(JSONObject jsonObject, Vector<JSONObject> vector, int i) {
-              System.out.println("updateDeviceListForUserSelection " + vector);
+              invokeMethodUIThread("Devices", vector.toString());
             }
 
             @Override
@@ -204,6 +210,29 @@ public class FlutterzoopPlugin implements FlutterPlugin, ActivityAware, MethodCa
           terminalListManager = new TerminalListManager(deviceSelectionListener,
               this.application.getApplicationContext());
 
+
+          voidTransactionListener = new VoidTransactionListener() {
+            @Override
+            public void voidTransactionSuccessful(JSONObject jsonObject) {
+              invokeMethodUIThread("VoidPaymentSuccessful", jsonObject.toString());
+            }
+
+            @Override
+            public void voidTransactionFailed(JSONObject jsonObject) {
+              invokeMethodUIThread("VoidPaymentFailed", jsonObject.toString());
+            }
+
+            @Override
+            public void currentVoidTransactionCanBeAbortedByUser(boolean b) {
+              System.out.println("currentVoidCanBeAbortedByUser" + b);
+            }
+
+            @Override
+            public void voidAborted() {
+              invokeMethodUIThread("VoidPaymentAborted", "voidPaymentAbort");
+            }
+          };
+
           terminalPaymentListener = new TerminalPaymentListener() {
             @Override
             public void paymentFailed(JSONObject jsonObject) {
@@ -218,7 +247,14 @@ public class FlutterzoopPlugin implements FlutterPlugin, ActivityAware, MethodCa
 
             @Override
             public void paymentSuccessful(JSONObject jsonObject) {
-              invokeMethodUIThread("PaymentSuccessful", jsonObject.toString());
+              try {
+                if (lastId != jsonObject.get("id")) {
+                  invokeMethodUIThread("PaymentSuccessful", jsonObject.toString());
+                  lastId = (String) jsonObject.get("id");
+                }
+              } catch (JSONException e) {
+                e.printStackTrace();
+              }
             }
 
             @Override
@@ -285,9 +321,16 @@ public class FlutterzoopPlugin implements FlutterPlugin, ActivityAware, MethodCa
             zoopTerminalPayment.setApplicationDisplayListener(applicationDisplayListener);
             zoopTerminalPayment.setExtraCardInformationListener(extraCardInformationListener);
           } catch (Exception err) {
-            System.out.println("zoopTerminalPayment exception - " +  err.toString());
+            System.out.println("zoopTerminalPayment exception - " + err.toString());
           }
 
+          try {
+            zoopTerminalVoidPayment = new ZoopTerminalVoidPayment();
+            zoopTerminalVoidPayment.setApplicationDisplayListener(applicationDisplayListener);
+            zoopTerminalVoidPayment.setVoidPaymentListener(voidTransactionListener);
+          } catch (Exception err) {
+            System.out.println("zoopVoidTerminalPayment exception - " + err.toString());
+          }
         } catch (Exception e) {
           e.printStackTrace();
         }
@@ -308,17 +351,44 @@ public class FlutterzoopPlugin implements FlutterPlugin, ActivityAware, MethodCa
       String sellerId = (String) jsonObject.get("sellerId");
       String publishableKey = (String) jsonObject.get("publishableKey");
 
-      zoopTerminalPayment.charge(
-              valueToCharge,
-              paymentOption,
-              numberInstall,
-              marketplaceId,
-              sellerId,
-              publishableKey
-              );
+      zoopTerminalPayment.charge(valueToCharge, paymentOption, numberInstall, marketplaceId, sellerId, publishableKey);
 
     } catch (JSONException e) {
       e.printStackTrace();
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
+
+  private void cancel(JSONObject jsonObject) {
+    try {
+      String uid = (String) jsonObject.get("uid");
+      String marketplaceId = (String) jsonObject.get("marketplaceId");
+      String sellerId = (String) jsonObject.get("sellerId");
+      String publishableKey = (String) jsonObject.get("publishableKey");
+
+      zoopTerminalVoidPayment.voidTransaction(uid, marketplaceId, sellerId, publishableKey);
+
+    } catch (JSONException e) {
+      e.printStackTrace();
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
+  private void abortCharge(Result result) {
+    try {
+      zoopTerminalPayment.requestAbortCharge();
+      System.out.println("ABORTOU");
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
+
+
+  private void voidAbortCharge(Result result) {
+    try {
+      zoopTerminalVoidPayment.requestAbortCharge();
+      System.out.println("CANCELOU");
     } catch (Exception e) {
       e.printStackTrace();
     }
@@ -408,6 +478,23 @@ public class FlutterzoopPlugin implements FlutterPlugin, ActivityAware, MethodCa
         break;
       }
 
+      case "abortCharge": {
+        abortCharge(result);
+        result.success(true);
+      }
+
+        case "voidAbortCharge": {
+          String data = call.arguments();
+          try {
+            JSONObject obj = new JSONObject(data);
+            cancel(obj);
+            result.success(true);
+          } catch (JSONException e) {
+            e.printStackTrace();
+          }
+          break;
+        }
+
       case "startScan": {
         if (ContextCompat.checkSelfPermission(activity,
             Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -471,7 +558,6 @@ public class FlutterzoopPlugin implements FlutterPlugin, ActivityAware, MethodCa
     return false;
   }
 
-
   private final StreamHandler stateHandler = new StreamHandler() {
     private EventSink sink;
 
@@ -527,7 +613,6 @@ public class FlutterzoopPlugin implements FlutterPlugin, ActivityAware, MethodCa
       result.error("startScan", e.getMessage(), e);
     }
   }
-
 
   @Override
   public void onListen(Object arguments, EventSink events) {
