@@ -68,8 +68,8 @@ class FlutterZoop {
           proccessPaymentAborted();
           break;
 
-        case 'PaymentVoidAborted':
-          proccessVoidPaymentAborted();
+        case 'VoidPaymentSuccessful':
+          proccessVoidPaymentSuccessful();
           break;
 
         case 'PaymentSuccessful':
@@ -210,6 +210,21 @@ class FlutterZoop {
     }
   }
 
+  Future<bool> chargeCeler(ZoopCharge charge) async {
+    try {
+      isCharging.add(true);
+      _errorMessage.add(null);
+      _terminalMessage.add(null);
+      _paymentMessage.add(null);
+      await _channel.invokeMethod('chargeCeler', jsonEncode(charge.toJson()));
+      return Future.value(true);
+    } catch (e) {
+      isCharging.add(false);
+      print('ERROR requestConnection ${e.toString()}');
+      throw Exception(e);
+    }
+  }
+
   Future<bool> voidAbortCharge(ZoopVoid charge) async {
     try {
       await _channel.invokeMethod('voidAbortCharge', jsonEncode(charge.toJson()));
@@ -264,7 +279,7 @@ class FlutterZoop {
     _paymentAbort.add(true);
   }
 
-  void proccessVoidPaymentAborted() {
+  void proccessVoidPaymentSuccessful() {
     _terminalMessage.add(null);
     _paymentVoidAbort.add(true);
   }
