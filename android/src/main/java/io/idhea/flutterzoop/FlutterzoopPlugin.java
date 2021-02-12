@@ -388,7 +388,7 @@ public class FlutterzoopPlugin implements FlutterPlugin, ActivityAware, MethodCa
 
   public void chargeCeler(JSONObject jsonObject)
   {
-    BigDecimal amount = BigDecimal.valueOf((double) jsonObject.get("valueToCharge"));
+    final BigDecimal amount = BigDecimal.valueOf((double) jsonObject.get("valueToCharge"));
     final int paymentOption = (int) jsonObject.get("paymentOption");
     final int numberOfInstallments = (int) jsonObject.get("iNumberOfInstallments");
     String marketplaceId = (String) jsonObject.get("marketplaceId");
@@ -429,7 +429,7 @@ public class FlutterzoopPlugin implements FlutterPlugin, ActivityAware, MethodCa
               transactionDataInfo.setTypeOfTransaction(TypeOfTransactionEnum.DEBIT);
             else {
               transactionDataInfo.setTypeOfTransaction(TypeOfTransactionEnum.CREDIT);
-              if(selectedPaymentOption == 2)
+              if(paymentOption == 2)
                 transactionDataInfo.setInstalmentsString(String.valueOf(numberOfInstallments));
             }
             transactionDataInfo.setProduct(true);
@@ -438,7 +438,7 @@ public class FlutterzoopPlugin implements FlutterPlugin, ActivityAware, MethodCa
                     .withType(MainMethodsEnum.START_TRANSACTION)
                     .withInitialDataInfo(initialDataInfo)
                     .withTransactionParams(transactionDataInfo)
-                    .withCallback(ChargeActivity.this).build();
+                    .withCallback(FlutterzoopPlugin.this).build();
 
             transactionMain.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
           }
