@@ -80,9 +80,16 @@ dependencies {
     implementation 'com.google.protobuf:protobuf-lite:3.0.1'
     implementation 'androidx.appcompat:appcompat:1.0.0'
     api 'androidx.core:core:1.0.1'
+    implementation 'com.karumi:dexter:5.0.0'
+    implementation 'com.google.code.gson:gson:2.8.5'
+    implementation 'com.squareup.retrofit2:retrofit:2.1.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.1.0'
     implementation 'com.squareup.okhttp3:okhttp:3.10.0'
     implementation 'com.squareup.okhttp3:okhttp-urlconnection:3.4.1'
 
 
     implementation files('../protos/zoop_emv_android_sdk_2.0.8_prod.jar')
+
+    implementation files('../protos/receipt-release.aar')
+    implementation files('../protos/easypayment-release.aar')
 }
