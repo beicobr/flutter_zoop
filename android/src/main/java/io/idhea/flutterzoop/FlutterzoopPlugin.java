@@ -24,6 +24,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.ParcelUuid;
 import android.util.Log;
@@ -31,12 +32,15 @@ import android.util.Log;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
+import java.util.Locale;
+
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.TimeZone;
 import java.util.Vector;
 
 import androidx.core.app.ActivityCompat;
@@ -61,6 +65,7 @@ import com.zoop.zoopandroidsdk.TerminalListManager;
 import com.zoop.zoopandroidsdk.ZoopAPI;
 import com.zoop.zoopandroidsdk.ZoopTerminalPayment;
 import com.zoop.zoopandroidsdk.ZoopTerminalVoidPayment;
+import com.zoop.zoopandroidsdk.commons.APIParameters;
 import com.zoop.zoopandroidsdk.commons.Extras;
 import com.zoop.zoopandroidsdk.terminal.ApplicationDisplayListener;
 import com.zoop.zoopandroidsdk.terminal.DeviceSelectionListener;
@@ -133,6 +138,7 @@ public class FlutterzoopPlugin implements FlutterPlugin, ActivityAware, MethodCa
   private ExtraCardInformationListener extraCardInformationListener;
 
   private String lastId = "";
+  TransactionMain transactionMain;
 
   /** Plugin registration. */
   public static void registerWith(Registrar registrar) {
@@ -382,21 +388,20 @@ public class FlutterzoopPlugin implements FlutterPlugin, ActivityAware, MethodCa
 
   public void chargeCeler(JSONObject jsonObject)
   {
+    BigDecimal amount = BigDecimal.valueOf((double) jsonObject.get("valueToCharge"));
+    final int paymentOption = (int) jsonObject.get("paymentOption");
+    final int numberOfInstallments = (int) jsonObject.get("iNumberOfInstallments");
+    String marketplaceId = (String) jsonObject.get("marketplaceId");
+    String sellerId = (String) jsonObject.get("sellerId");
+    String publishableKey = (String) jsonObject.get("publishableKey");
     try {
-      BigDecimal valueToCharge = BigDecimal.valueOf((double) jsonObject.get("valueToCharge"));
-      int paymentOption = (int) jsonObject.get("paymentOption");
-      int numberOfInstallments = (int) jsonObject.get("iNumberOfInstallments");
-      String marketplaceId = (String) jsonObject.get("marketplaceId");
-      String sellerId = (String) jsonObject.get("sellerId");
-      String publishableKey = (String) jsonObject.get("publishableKey");
-
       JSONObject joSelectedTerminal = TerminalListManager.getCurrentSelectedZoopTerminal();
       BluetoothDevice device = BluetoothAdapter.getDefaultAdapter().getRemoteDevice(joSelectedTerminal.getString("uri").substring(8));
       final TerminalConnectionUtil terminalConnectionUtil = new TerminalConnectionUtil(this, device, TypeOfCommunicationEnum.BLUETOOTH_PAX);
       terminalConnectionUtil.setListener(new br.com.paxbr.easypayment.listeners.Response() {
         @Override
         public void onFail(TransactionException e) {
-          showMessage("Connection Fail", TerminalMessageType.ERROR);
+          System.out.println("Connection Fail" + TerminalMessageType.ERROR);
         }
 
         @Override
@@ -406,7 +411,7 @@ public class FlutterzoopPlugin implements FlutterPlugin, ActivityAware, MethodCa
             InitialDataInfo initialDataInfo = new InitialDataInfo();
             initialDataInfo.setAcquire(AcquireEnum.GENERAL);
             initialDataInfo.setTypeOfCommunication(TypeOfCommunicationEnum.BLUETOOTH_PAX);
-            initialDataInfo.setCompanyName(getResources().getString(R.string.app_name));
+            initialDataInfo.setCompanyName("paggja");
             initialDataInfo.setTimeOftimeOut(100);
             initialDataInfo.setTimeZone(TimeZone.getTimeZone("GMT-3:00"));
             initialDataInfo.setLanguage(new Locale("pt", "BR"));
@@ -473,16 +478,6 @@ public class FlutterzoopPlugin implements FlutterPlugin, ActivityAware, MethodCa
     try {
       zoopTerminalPayment.requestAbortCharge();
       System.out.println("ABORTOU");
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
-  }
-
-
-  private void voidAbortCharge(Result result) {
-    try {
-      zoopTerminalVoidPayment.requestAbortCharge();
-      System.out.println("CANCELOU");
     } catch (Exception e) {
       e.printStackTrace();
     }
@@ -574,6 +569,7 @@ public class FlutterzoopPlugin implements FlutterPlugin, ActivityAware, MethodCa
 
       case "chargeCeler": {
         String data = call.arguments();
+        System.out.println("CELER = = = =  " + data);
         try {
           JSONObject obj = new JSONObject(data);
           chargeCeler(obj);
