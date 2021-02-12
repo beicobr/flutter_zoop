@@ -99,7 +99,7 @@ import org.json.JSONObject;
 
 /** FlutterzoopPlugin */
 public class FlutterzoopPlugin implements FlutterPlugin, ActivityAware, MethodCallHandler,
-    RequestPermissionsResultListener, EventChannel.StreamHandler {
+    RequestPermissionsResultListener, br.com.paxbr.easypayment.listeners.Response, EventChannel.StreamHandler {
   private static final String TAG = "FlutterzoopPlugin";
   private static FlutterzoopPlugin instance;
   private Object initializationLock = new Object();
@@ -397,7 +397,7 @@ public class FlutterzoopPlugin implements FlutterPlugin, ActivityAware, MethodCa
     try {
       JSONObject joSelectedTerminal = TerminalListManager.getCurrentSelectedZoopTerminal();
       BluetoothDevice device = BluetoothAdapter.getDefaultAdapter().getRemoteDevice(joSelectedTerminal.getString("uri").substring(8));
-      final TerminalConnectionUtil terminalConnectionUtil = new TerminalConnectionUtil(this, device, TypeOfCommunicationEnum.BLUETOOTH_PAX);
+      final TerminalConnectionUtil terminalConnectionUtil = new TerminalConnectionUtil(device, TypeOfCommunicationEnum.BLUETOOTH_PAX);
       terminalConnectionUtil.setListener(new br.com.paxbr.easypayment.listeners.Response() {
         @Override
         public void onFail(TransactionException e) {
@@ -434,11 +434,11 @@ public class FlutterzoopPlugin implements FlutterPlugin, ActivityAware, MethodCa
             }
             transactionDataInfo.setProduct(true);
 
-            transactionMain = new TransactionBuilder(getApplicationContext())
+            transactionMain = new TransactionBuilder()
                     .withType(MainMethodsEnum.START_TRANSACTION)
                     .withInitialDataInfo(initialDataInfo)
                     .withTransactionParams(transactionDataInfo)
-                    .withCallback(FlutterzoopPlugin.this).build();
+                    .withCallback().build();
 
             transactionMain.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
           }
