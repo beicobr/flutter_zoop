@@ -24,7 +24,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.ParcelUuid;
 import android.util.Log;
@@ -32,15 +31,12 @@ import android.util.Log;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
-import java.util.Locale;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.TimeZone;
 import java.util.Vector;
 
 import androidx.core.app.ActivityCompat;
@@ -65,7 +61,6 @@ import com.zoop.zoopandroidsdk.TerminalListManager;
 import com.zoop.zoopandroidsdk.ZoopAPI;
 import com.zoop.zoopandroidsdk.ZoopTerminalPayment;
 import com.zoop.zoopandroidsdk.ZoopTerminalVoidPayment;
-import com.zoop.zoopandroidsdk.commons.APIParameters;
 import com.zoop.zoopandroidsdk.commons.Extras;
 import com.zoop.zoopandroidsdk.terminal.ApplicationDisplayListener;
 import com.zoop.zoopandroidsdk.terminal.DeviceSelectionListener;
@@ -74,32 +69,12 @@ import com.zoop.zoopandroidsdk.terminal.TerminalMessageType;
 import com.zoop.zoopandroidsdk.terminal.TerminalPaymentListener;
 import com.zoop.zoopandroidsdk.terminal.VoidTransactionListener;
 
-import br.com.paxbr.easypayment.controller.TransactionBuilder;
-import br.com.paxbr.easypayment.controller.TransactionMain;
-import br.com.paxbr.easypayment.data.DAO.user.UserSource;
-import br.com.paxbr.easypayment.data.domain.request.InitialDataInfo;
-import br.com.paxbr.easypayment.data.domain.request.InterestInstallment;
-import br.com.paxbr.easypayment.data.domain.request.InterestInstallmentContainer;
-import br.com.paxbr.easypayment.data.domain.request.TransactionDataInfo;
-import br.com.paxbr.easypayment.data.domain.response.UserResponse;
-import br.com.paxbr.easypayment.data.domain.response.server.Product;
-import br.com.paxbr.easypayment.data.domain.response.server.TransactionResponse;
-import br.com.paxbr.easypayment.enummeration.AcquireEnum;
-import br.com.paxbr.easypayment.enummeration.EnvironmentOfTkpp;
-import br.com.paxbr.easypayment.enummeration.MainMethodsEnum;
-import br.com.paxbr.easypayment.enummeration.ServiceErrorEnum;
-import br.com.paxbr.easypayment.enummeration.TypeOfCommunicationEnum;
-import br.com.paxbr.easypayment.enummeration.TypeOfTransactionEnum;
-import br.com.paxbr.easypayment.enummeration.UserInteractionEnum;
-import br.com.paxbr.easypayment.error.TransactionException;
-import br.com.paxbr.easypayment.util.TerminalConnectionUtil;
-
 import org.json.JSONException;
 import org.json.JSONObject;
 
 /** FlutterzoopPlugin */
 public class FlutterzoopPlugin implements FlutterPlugin, ActivityAware, MethodCallHandler,
-    RequestPermissionsResultListener, br.com.paxbr.easypayment.listeners.Response, EventChannel.StreamHandler {
+    RequestPermissionsResultListener, EventChannel.StreamHandler {
   private static final String TAG = "FlutterzoopPlugin";
   private static FlutterzoopPlugin instance;
   private Object initializationLock = new Object();
@@ -138,7 +113,6 @@ public class FlutterzoopPlugin implements FlutterPlugin, ActivityAware, MethodCa
   private ExtraCardInformationListener extraCardInformationListener;
 
   private String lastId = "";
-  TransactionMain transactionMain;
 
   /** Plugin registration. */
   public static void registerWith(Registrar registrar) {
@@ -386,79 +360,6 @@ public class FlutterzoopPlugin implements FlutterPlugin, ActivityAware, MethodCa
     }
   }
 
-  public void chargeCeler(JSONObject jsonObject)
-  {
-    final BigDecimal amount = BigDecimal.valueOf((double) jsonObject.get("valueToCharge"));
-    final int paymentOption = (int) jsonObject.get("paymentOption");
-    final int numberOfInstallments = (int) jsonObject.get("iNumberOfInstallments");
-    String marketplaceId = (String) jsonObject.get("marketplaceId");
-    String sellerId = (String) jsonObject.get("sellerId");
-    String publishableKey = (String) jsonObject.get("publishableKey");
-    try {
-      JSONObject joSelectedTerminal = TerminalListManager.getCurrentSelectedZoopTerminal();
-      BluetoothDevice device = BluetoothAdapter.getDefaultAdapter().getRemoteDevice(joSelectedTerminal.getString("uri").substring(8));
-      final TerminalConnectionUtil terminalConnectionUtil = new TerminalConnectionUtil(device, TypeOfCommunicationEnum.BLUETOOTH_PAX);
-      terminalConnectionUtil.setListener(new br.com.paxbr.easypayment.listeners.Response() {
-        @Override
-        public void onFail(TransactionException e) {
-          System.out.println("Connection Fail" + TerminalMessageType.ERROR);
-        }
-
-        @Override
-        public void onSuccess() {
-          try {
-            JSONObject joSeller = (new JSONObject(APIParameters.getInstance().getGlobalStringParameter("seller")));
-            InitialDataInfo initialDataInfo = new InitialDataInfo();
-            initialDataInfo.setAcquire(AcquireEnum.GENERAL);
-            initialDataInfo.setTypeOfCommunication(TypeOfCommunicationEnum.BLUETOOTH_PAX);
-            initialDataInfo.setCompanyName("paggja");
-            initialDataInfo.setTimeOftimeOut(100);
-            initialDataInfo.setTimeZone(TimeZone.getTimeZone("GMT-3:00"));
-            initialDataInfo.setLanguage(new Locale("pt", "BR"));
-            initialDataInfo.setSocket(terminalConnectionUtil.getResult());
-            initialDataInfo.setUserRegister(joSeller.getString("doc"));
-            //initialDataInfo.setUserRegister("42988901805");
-            //initialDataInfo.setEnvironmentOfTkpp(EnvironmentOfTkpp.DEV_CELER);
-            initialDataInfo.setEnvironmentOfTkpp(EnvironmentOfTkpp.PROD_CELER);
-            initialDataInfo.setNeedReceipt(true);
-
-            long value = amount.multiply(new BigDecimal(100)).longValue();
-            TransactionDataInfo transactionDataInfo = new TransactionDataInfo();
-            transactionDataInfo.setAmmount(String.valueOf(value));
-            if(paymentOption == 1)
-              transactionDataInfo.setTypeOfTransaction(TypeOfTransactionEnum.DEBIT);
-            else {
-              transactionDataInfo.setTypeOfTransaction(TypeOfTransactionEnum.CREDIT);
-              if(paymentOption == 2)
-                transactionDataInfo.setInstalmentsString(String.valueOf(numberOfInstallments));
-            }
-            transactionDataInfo.setProduct(true);
-
-            transactionMain = new TransactionBuilder()
-                    .withType(MainMethodsEnum.START_TRANSACTION)
-                    .withInitialDataInfo(initialDataInfo)
-                    .withTransactionParams(transactionDataInfo)
-                    .withCallback().build();
-
-            transactionMain.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-          }
-          catch (JSONException e) {
-
-          }
-        }
-
-        @Override
-        public void onInformationRequested(UserInteractionEnum userInteractionEnum, Object o) {
-
-        }
-      });
-      terminalConnectionUtil.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-    }
-    catch (JSONException e) {
-
-    }
-  }
-
   private void cancel(JSONObject jsonObject) {
     try {
       String uid = (String) jsonObject.get("uid");
@@ -478,6 +379,16 @@ public class FlutterzoopPlugin implements FlutterPlugin, ActivityAware, MethodCa
     try {
       zoopTerminalPayment.requestAbortCharge();
       System.out.println("ABORTOU");
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
+
+
+  private void voidAbortCharge(Result result) {
+    try {
+      zoopTerminalVoidPayment.requestAbortCharge();
+      System.out.println("CANCELOU");
     } catch (Exception e) {
       e.printStackTrace();
     }
@@ -560,19 +471,6 @@ public class FlutterzoopPlugin implements FlutterPlugin, ActivityAware, MethodCa
         try {
           JSONObject obj = new JSONObject(data);
           charge(obj);
-          result.success(true);
-        } catch (JSONException e) {
-          e.printStackTrace();
-        }
-        break;
-      }
-
-      case "chargeCeler": {
-        String data = call.arguments();
-        System.out.println("CELER = = = =  " + data);
-        try {
-          JSONObject obj = new JSONObject(data);
-          chargeCeler(obj);
           result.success(true);
         } catch (JSONException e) {
           e.printStackTrace();
