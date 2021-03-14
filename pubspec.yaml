@@ -10,9 +10,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  convert: "^2.1.1"
-  protobuf: "^1.0.1"
-  rxdart: ^0.24.0
+  convert: ^3.0.0
+  protobuf: ^2.0.0
+  rxdart: ^0.26.0
   intl: ^0.17.0
 
 dev_dependencies:
