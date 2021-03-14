@@ -1,6 +1,6 @@
-name: flutterzoop
+name: flutterzoop fork
 description: A Flutter Zoop plugin.
-version: 0.0.1
+version: 0.0.12
 homepage: https://github.com/carlosalito/flutter_zoop
 
 environment:
@@ -13,7 +13,7 @@ dependencies:
   convert: "^2.1.1"
   protobuf: "^1.0.1"
   rxdart: ^0.24.0
-  intl: ^0.16.1
+  intl: ^0.17.0
 
 dev_dependencies:
   flutter_test:
